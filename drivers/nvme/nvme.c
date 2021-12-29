@@ -933,6 +933,13 @@ free_nvme:
 	return ret;
 }
 
+int nvme_shutdown(struct udevice *udev)
+{
+	struct nvme_dev *ndev = dev_get_priv(udev);
+
+	return nvme_disable_ctrl(ndev);
+}
+
 static int nvme_bind(struct udevice *udev)
 {
 	static int ndev_num;
