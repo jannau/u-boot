@@ -180,7 +180,7 @@ static int apple_spi_kbd_check(struct input_config *input)
 	dm_spi_release_bus(dev);
 
 	/*
-	 * The keyboard controlled needs a delay between subsequent
+	 * The keyboard controller needs a delay between subsequent
 	 * SPI transfers.
 	 */
 	udelay(250);
