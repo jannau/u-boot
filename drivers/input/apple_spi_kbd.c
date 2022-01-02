@@ -10,6 +10,7 @@
 #include <stdio_dev.h>
 #include <asm-generic/gpio.h>
 #include <linux/delay.h>
+#include <linux/input.h>
 
 /*
  * The Apple SPI keyboard controller implements a protocol that
@@ -20,46 +21,40 @@
 /* Modifier key bits */
 #define HID_MOD_LEFTCTRL	BIT(0)
 #define HID_MOD_LEFTSHIFT	BIT(1)
+#define HID_MOD_LEFTALT		BIT(2)
+#define HID_MOD_LEFTGUI		BIT(3)
 #define HID_MOD_RIGHTCTRL	BIT(4)
 #define HID_MOD_RIGHTSHIFT	BIT(5)
+#define HID_MOD_RIGHTALT	BIT(6)
+#define HID_MOD_RIGHTGUI	BIT(7)
 
-/* Modifier key codes */
-#define HID_KEY_LEFTCTRL	0xe0
-#define HID_KEY_LEFTSHIFT	0xe1
-#define HID_KEY_RIGHTCTRL	0xe4
-#define HID_KEY_RIGHTSHIFT	0xe5
-
-static const uchar hid_kbd_plain_xlate[] = {
-	0xff, 0xff, 0xff, 0xff, 'a', 'b', 'c', 'd',
-	'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l',
-	'm', 'n', 'o', 'p', 'q', 'r', 's', 't',
-	'u', 'v', 'w', 'x', 'y', 'z', '1', '2',
-	'3', '4', '5', '6', '7', '8', '9', '0',
-	'\r', 0x1b, '\b', '\t', ' ', '-', '=', '[',
-	']', '\\', '#', ';', '\'', '`',	',', '.',
-	'/',
-};
-
-static const uchar hid_kbd_shift_xlate[] = {
-	0xff, 0xff, 0xff, 0xff, 'A', 'B', 'C', 'D',
-	'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L',
-	'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T',
-	'U', 'V', 'W', 'X', 'Y', 'Z', '!', '@',
-	'#', '$', '%', '^', '&', '*', '(', ')',
-	'\r', 0x1b, '\b', '\t', ' ', '_', '+', '{',
-	'}', '|', '~', ':', '\"', '~', '<', '>',
-	'?',
-};
-
-static const uchar hid_kbd_ctrl_xlate[] = {
-	0xff, 0xff, 0xff, 0xff, 0x01, 0x02, 0x03, 0x04,
-	0x05, 0x06, 0x07, 0x08, 0x09, 0x0a, 0x0b, 0x0c,
-	0x0d, 0x0e, 0x0f, 0x10, 0x11, 0x12, 0x13, 0x14,
-	0x15, 0x16, 0x17, 0x18, 0x19, 0x1a, '1', 0x00,
-	'3', '4', '5', 0x1e, '7', '8', '9', '0',
-	'\r', 0x1b, '\b', '\t', ' ', 0x1f, '=', 0x1b,
-	0x1d, 0x1c, '#', ';', '\'', '`', ',', '.',
-	'/',
+static const u8 hid_kbd_keymap[] = {
+	KEY_RESERVED, 0xff, 0xff, 0xff,
+	KEY_A, KEY_B, KEY_C, KEY_D,
+	KEY_E, KEY_F, KEY_G, KEY_H,
+	KEY_I, KEY_J, KEY_K, KEY_L,
+	KEY_M, KEY_N, KEY_O, KEY_P,
+	KEY_Q, KEY_R, KEY_S, KEY_T,
+	KEY_U, KEY_V, KEY_W, KEY_X,
+	KEY_Y, KEY_Z, KEY_1, KEY_2,
+	KEY_3, KEY_4, KEY_5, KEY_6,
+	KEY_7, KEY_8, KEY_9, KEY_0,
+	KEY_ENTER, KEY_ESC, KEY_BACKSPACE, KEY_TAB,
+	KEY_SPACE, KEY_MINUS, KEY_EQUAL, KEY_LEFTBRACE,
+	KEY_RIGHTBRACE, KEY_BACKSLASH, 0xff, KEY_SEMICOLON,
+	KEY_APOSTROPHE, KEY_GRAVE, KEY_COMMA, KEY_DOT,
+	KEY_SLASH, KEY_CAPSLOCK, KEY_F1, KEY_F2,
+	KEY_F3, KEY_F4, KEY_F5, KEY_F6,
+	KEY_F7, KEY_F8, KEY_F9, KEY_F10,
+	KEY_F11, KEY_F12, KEY_SYSRQ, KEY_SCROLLLOCK,
+	KEY_PAUSE, KEY_INSERT, KEY_HOME, KEY_PAGEUP,
+	KEY_DELETE, KEY_END, KEY_PAGEDOWN, KEY_RIGHT,
+	KEY_LEFT, KEY_DOWN, KEY_UP, KEY_NUMLOCK,
+	KEY_KPSLASH, KEY_KPASTERISK, KEY_KPMINUS, KEY_KPPLUS,
+	KEY_KPENTER, KEY_KP1, KEY_KP2, KEY_KP3,
+	KEY_KP4, KEY_KP5, KEY_KP6, KEY_KP7,
+	KEY_KP8, KEY_KP9, KEY_KP0, KEY_KPDOT,
+	KEY_BACKSLASH, KEY_COMPOSE, KEY_POWER, KEY_KPEQUAL,
 };
 
 /* Report ID used for keyboard input reports. */
@@ -111,17 +106,29 @@ static void apple_spi_kbd_service_modifiers(struct input_config *input)
 	u8 old = priv->old.modifiers;
 
 	if ((new ^ old) & HID_MOD_LEFTCTRL)
-		input_add_keycode(input, HID_KEY_LEFTCTRL,
+		input_add_keycode(input, KEY_LEFTCTRL,
 				  old & HID_MOD_LEFTCTRL);
 	if ((new ^ old) & HID_MOD_RIGHTCTRL)
-		input_add_keycode(input, HID_KEY_RIGHTCTRL,
+		input_add_keycode(input, KEY_RIGHTCTRL,
 				  old & HID_MOD_RIGHTCTRL);
 	if ((new ^ old) & HID_MOD_LEFTSHIFT)
-		input_add_keycode(input, HID_KEY_LEFTSHIFT,
+		input_add_keycode(input, KEY_LEFTSHIFT,
 				  old & HID_MOD_LEFTSHIFT);
 	if ((new ^ old) & HID_MOD_RIGHTSHIFT)
-		input_add_keycode(input, HID_KEY_RIGHTSHIFT,
+		input_add_keycode(input, KEY_RIGHTSHIFT,
 				  old & HID_MOD_RIGHTSHIFT);
+	if ((new ^ old) & HID_MOD_LEFTALT)
+		input_add_keycode(input, KEY_LEFTALT,
+				  old & HID_MOD_LEFTALT);
+	if ((new ^ old) & HID_MOD_RIGHTALT)
+		input_add_keycode(input, KEY_RIGHTALT,
+				  old & HID_MOD_RIGHTALT);
+	if ((new ^ old) & HID_MOD_LEFTGUI)
+		input_add_keycode(input, KEY_LEFTMETA,
+				  old & HID_MOD_LEFTGUI);
+	if ((new ^ old) & HID_MOD_RIGHTGUI)
+		input_add_keycode(input, KEY_RIGHTMETA,
+				  old & HID_MOD_RIGHTGUI);
 }
 
 static void apple_spi_kbd_service_key(struct input_config *input, int i,
@@ -140,8 +147,9 @@ static void apple_spi_kbd_service_key(struct input_config *input, int i,
 	}
 
 	if (memscan(new, old[i], sizeof(priv->new.keycode)) ==
-	    new + sizeof(priv->new.keycode))
-		input_add_keycode(input, old[i], released);
+	    new + sizeof(priv->new.keycode) &&
+	    old[i] < ARRAY_SIZE(hid_kbd_keymap))
+		input_add_keycode(input, hid_kbd_keymap[old[i]], released);
 }
 
 static int apple_spi_kbd_check(struct input_config *input)
@@ -223,12 +231,7 @@ static int apple_spi_kbd_probe(struct udevice *dev)
 
 	input->dev = dev;
 	input->read_keys = apple_spi_kbd_check;
-	input_add_table(input, -1, -1,
-			hid_kbd_plain_xlate, ARRAY_SIZE(hid_kbd_plain_xlate));
-	input_add_table(input, HID_KEY_LEFTSHIFT, HID_KEY_RIGHTSHIFT,
-			hid_kbd_shift_xlate, ARRAY_SIZE(hid_kbd_shift_xlate));
-	input_add_table(input, HID_KEY_LEFTCTRL, HID_KEY_RIGHTCTRL,
-			hid_kbd_ctrl_xlate, ARRAY_SIZE(hid_kbd_ctrl_xlate));
+	input_add_tables(input, false);
 	strcpy(sdev->name, "spikbd");
 
 	return input_stdio_register(sdev);
