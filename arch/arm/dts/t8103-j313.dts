@@ -18,7 +18,7 @@
 };
 
 &wifi0 {
-	apple,module-instance = "shikoku";
+	brcm,board-type = "apple,shikoku";
 };
 
 /*

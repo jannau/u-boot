@@ -78,7 +78,7 @@ static int apple_mbox_probe(struct udevice *dev)
 }
 
 static const struct udevice_id apple_mbox_of_match[] = {
-	{ .compatible = "apple,t8103-asc-mailbox" },
+	{ .compatible = "apple,asc-mailbox-v4" },
 	{ /* sentinel */ }
 };
 

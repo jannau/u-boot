@@ -22,7 +22,7 @@
 };
 
 &wifi0 {
-	apple,module-instance = "atlantisb";
+	brcm,board-type = "apple,atlantisb";
 };
 
 /*

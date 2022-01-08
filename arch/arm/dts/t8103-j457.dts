@@ -22,7 +22,7 @@
 };
 
 &wifi0 {
-	apple,module-instance = "santorini";
+	brcm,board-type = "apple,santorini";
 };
 
 /*

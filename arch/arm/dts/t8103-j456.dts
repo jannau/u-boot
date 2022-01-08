@@ -22,7 +22,7 @@
 };
 
 &wifi0 {
-	apple,module-instance = "capri";
+	brcm,board-type = "apple,capri";
 };
 
 &i2c0 {

@@ -372,7 +372,7 @@
 		};
 
 		smc_mbox: mbox@23e408000 {
-			compatible = "apple,t8103-asc-mailbox", "apple,asc-mailbox";
+			compatible = "apple,t8103-asc-mailbox", "apple,asc-mailbox-v4";
 			reg = <0x2 0x3e408000 0x0 0x4000>;
 			interrupt-parent = <&aic>;
 			interrupts = <AIC_IRQ 400 IRQ_TYPE_LEVEL_HIGH>,
@@ -385,10 +385,8 @@
 		};
 
 		smc: smc@23e050000 {
-			compatible = "apple,smc-m1";
-			reg = <0x2 0x3e050000 0x0 0x4000>,
-			      <0x2 0x3e400000 0x0 0x4000>;
-			reg-names = "smc", "coproc";
+			compatible = "apple,smc";
+			reg = <0x2 0x3e050000 0x0 0x4000>;
 			mboxes = <&smc_mbox>;
 			gpio-controller;
 			#gpio-cells = <2>;
@@ -416,8 +414,8 @@
 				     <AIC_IRQ 274 IRQ_TYPE_LEVEL_HIGH>;
 		};
 
-		ans: mbox@277408000 {
-			compatible = "apple,t8103-asc-mailbox", "apple,asc-mailbox";
+		ans_mbox: mbox@277408000 {
+			compatible = "apple,t8103-asc-mailbox", "apple,asc-mailbox-v4";
 			reg = <0x2 0x77408000 0x0 0x4000>;
 			interrupt-parent = <&aic>;
 			interrupts = <AIC_IRQ 583 IRQ_TYPE_LEVEL_HIGH>,
@@ -431,18 +429,19 @@
 		};
 
 		sart: sart@27bc50000 {
-			compatible = "apple,t8103-sart";
+			compatible = "apple,t8103-sart", "apple,sart2";
 			reg = <0x2 0x7bc50000 0x0 0x10000>;
 			power-domains = <&ps_ans2>;
 		};
 
-		ans2: nvme@27bcc0000 {
-			compatible = "apple,t8103-ans-nvme", "apple,nvme-m1";
-			reg = <0x2 0x7bcc0000 0x0 0x40000>, <0x2 0x77400000 0x0 0x4000>;
-			reg-names = "nvme", "coproc";
+		nvme@27bcc0000 {
+			compatible = "apple,t8103-nvme-ans2", "apple,nvme-ans2", "apple,nvme-m1";
+			reg = <0x2 0x7bcc0000 0x0 0x40000>,
+				<0x2 0x77400000 0x0 0x4000>;
+			reg-names = "nvme", "ans";
 			interrupt-parent = <&aic>;
 			interrupts = <AIC_IRQ 590 IRQ_TYPE_LEVEL_HIGH>;
-			mboxes = <&ans>;
+			mboxes = <&ans_mbox>;
 			apple,sart = <&sart>;
 			power-domains = <&ps_ans2>;
 			resets = <&ps_ans2>;

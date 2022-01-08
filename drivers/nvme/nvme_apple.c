@@ -107,7 +107,7 @@ static int apple_nvme_remove(struct udevice *dev)
 }
 
 static const struct udevice_id apple_nvme_ids[] = {
-	{ .compatible = "apple,t8103-ans-nvme" },
+	{ .compatible = "apple,nvme-ans2" },
 	{ /* sentinel */ }
 };
 

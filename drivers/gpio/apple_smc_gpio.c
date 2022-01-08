@@ -183,7 +183,7 @@ static int apple_smc_gpio_remove(struct udevice *dev)
 }
 
 static const struct udevice_id apple_smc_ids[] = {
-	{ .compatible = "apple,smc-m1" },
+	{ .compatible = "apple,smc" },
 	{ /* sentinel */ }
 };
 
