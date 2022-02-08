@@ -31,6 +31,18 @@ static uint get_bmp_col_16bpp(struct bmp_color_table_entry cte)
 }
 
 /**
+ * get_bmp_col_x2r10g10b10() - Convert a colour-table entry into a x2r10g10b10  pixel value
+ *
+ * Return: value to write to the x2r10g10b10 frame buffer for this palette entry
+ */
+static u32 get_bmp_col_x2r10g10b10(struct bmp_color_table_entry *cte)
+{
+	return ((cte->red << 22U) |
+		(cte->green << 12U) |
+		(cte->blue << 2U));
+}
+
+/**
  * write_pix8() - Write a pixel from a BMP image into the framebuffer
  *
  * This handles frame buffers with 8, 16, 24 or 32 bits per pixel
@@ -42,8 +54,8 @@ static uint get_bmp_col_16bpp(struct bmp_color_table_entry cte)
  *	which is either written directly (bpix == 8) or used to look up the
  *	palette to get a colour to write
  */
-static void write_pix8(u8 *fb, uint bpix, struct bmp_color_table_entry *palette,
-		       u8 *bmap)
+static void write_pix8(u8 *fb, uint bpix, enum video_format eformat,
+		       struct bmp_color_table_entry *palette, u8 *bmap)
 {
 	if (bpix == 8) {
 		*fb++ = *bmap;
@@ -57,6 +69,8 @@ static void write_pix8(u8 *fb, uint bpix, struct bmp_color_table_entry *palette,
 			*fb++ = cte->red;
 			*fb++ = cte->green;
 			*fb++ = cte->blue;
+		} else if (eformat == VIDEO_X2R10G10B10) {
+			*(u32 *)fb = get_bmp_col_x2r10g10b10(cte);
 		} else {
 			*fb++ = cte->blue;
 			*fb++ = cte->green;
@@ -66,28 +80,29 @@ static void write_pix8(u8 *fb, uint bpix, struct bmp_color_table_entry *palette,
 	}
 }
 
-static void draw_unencoded_bitmap(u8 **fbp, uint bpix, uchar *bmap,
+static void draw_unencoded_bitmap(u8 **fbp, uint bpix,
+				  enum video_format eformat, uchar *bmap,
 				  struct bmp_color_table_entry *palette,
 				  int cnt)
 {
 	u8 *fb = *fbp;
 
 	while (cnt > 0) {
-		write_pix8(fb, bpix, palette, bmap++);
+		write_pix8(fb, bpix, eformat, palette, bmap++);
 		fb += bpix / 8;
 		cnt--;
 	}
 	*fbp = fb;
 }
 
-static void draw_encoded_bitmap(u8 **fbp, uint bpix,
+static void draw_encoded_bitmap(u8 **fbp, uint bpix, enum video_format eformat,
 				struct bmp_color_table_entry *palette, u8 *bmap,
 				int cnt)
 {
 	u8 *fb = *fbp;
 
 	while (cnt > 0) {
-		write_pix8(fb, bpix, palette, bmap);
+		write_pix8(fb, bpix, eformat, palette, bmap);
 		fb += bpix / 8;
 		cnt--;
 	}
@@ -96,6 +111,7 @@ static void draw_encoded_bitmap(u8 **fbp, uint bpix,
 
 static void video_display_rle8_bitmap(struct udevice *dev,
 				      struct bmp_image *bmp, uint bpix,
+				      enum video_format eformat,
 				      struct bmp_color_table_entry *palette,
 				      uchar *fb, int x_off, int y_off,
 				      ulong width, ulong height)
@@ -148,7 +164,7 @@ static void video_display_rle8_bitmap(struct udevice *dev,
 						else
 							cnt = runlen;
 						draw_unencoded_bitmap(
-							&fb, bpix,
+							&fb, bpix, eformat,
 							bmap, palette, cnt);
 					}
 					x += runlen;
@@ -173,8 +189,9 @@ static void video_display_rle8_bitmap(struct udevice *dev,
 						cnt = width - x;
 					else
 						cnt = runlen;
-					draw_encoded_bitmap(&fb, bpix, palette,
-							    &bmap[1], cnt);
+					draw_encoded_bitmap(&fb, bpix, eformat,
+							    palette, &bmap[1],
+							    cnt);
 				}
 				x += runlen;
 			}
@@ -224,6 +241,7 @@ int video_bmp_display(struct udevice *dev, ulong bmp_image, int x, int y,
 	unsigned long width, height, byte_width;
 	unsigned long pwidth = priv->xsize;
 	unsigned colours, bpix, bmp_bpix;
+	enum video_format eformat;
 	struct bmp_color_table_entry *palette;
 	int hdr_size;
 	int ret;
@@ -245,6 +263,7 @@ int video_bmp_display(struct udevice *dev, ulong bmp_image, int x, int y,
 	colours = 1 << bmp_bpix;
 
 	bpix = VNBITS(priv->bpix);
+	eformat = priv->format;
 
 	if (bpix != 1 && bpix != 8 && bpix != 16 && bpix != 32) {
 		printf("Error: %d bit/pixel mode, but BMP has %d bit/pixel\n",
@@ -298,8 +317,9 @@ int video_bmp_display(struct udevice *dev, ulong bmp_image, int x, int y,
 				&bmp->header.compression);
 			debug("compressed %d %d\n", compression, BMP_BI_RLE8);
 			if (compression == BMP_BI_RLE8) {
-				video_display_rle8_bitmap(dev, bmp, bpix, palette, fb,
-							  x, y, width, height);
+				video_display_rle8_bitmap(dev, bmp, bpix, eformat,
+							  palette, fb, x, y,
+							  width, height);
 				break;
 			}
 		}
@@ -312,7 +332,7 @@ int video_bmp_display(struct udevice *dev, ulong bmp_image, int x, int y,
 		for (i = 0; i < height; ++i) {
 			WATCHDOG_RESET();
 			for (j = 0; j < width; j++) {
-				write_pix8(fb, bpix, palette, bmap);
+				write_pix8(fb, bpix, eformat, palette, bmap);
 				bmap++;
 				fb += bpix / 8;
 			}
@@ -345,6 +365,15 @@ int video_bmp_display(struct udevice *dev, ulong bmp_image, int x, int y,
 							(bmap[0] >> 3);
 						bmap += 3;
 						fb += 2;
+					} else if (eformat == VIDEO_X2R10G10B10) {
+						u32 pix;
+						pix = *bmap++ << 22U;
+						pix |= *bmap++ << 12U;
+						pix |= *bmap++ << 2U;
+						*fb++ = pix & 0xff;
+						*fb++ = (pix >> 8) & 0xff;
+						*fb++ = (pix >> 16) & 0xff;
+						*fb++ = pix >> 24;
 					} else {
 						*fb++ = *bmap++;
 						*fb++ = *bmap++;
@@ -361,10 +390,22 @@ int video_bmp_display(struct udevice *dev, ulong bmp_image, int x, int y,
 		if (IS_ENABLED(CONFIG_BMP_32BPP)) {
 			for (i = 0; i < height; ++i) {
 				for (j = 0; j < width; j++) {
-					*fb++ = *bmap++;
-					*fb++ = *bmap++;
-					*fb++ = *bmap++;
-					*fb++ = *bmap++;
+					if (eformat == VIDEO_X2R10G10B10) {
+						u32 pix;
+						pix = *bmap++ << 30U;
+						pix |= *bmap++ << 22U;
+						pix |= *bmap++ << 12U;
+						pix |= *bmap++ << 2U;
+						*fb++ = pix & 0xff;
+						*fb++ = (pix >> 8) & 0xff;
+						*fb++ = (pix >> 16) & 0xff;
+						*fb++ = pix >> 24;
+					} else {
+						*fb++ = *bmap++;
+						*fb++ = *bmap++;
+						*fb++ = *bmap++;
+						*fb++ = *bmap++;
+					}
 				}
 				fb -= priv->line_length + width * (bpix / 8);
 			}
