@@ -290,6 +290,8 @@ int board_late_init(void)
 	status |= env_set_hex("kernel_addr_r", base + SZ_2M);
 	status |= env_set_hex("ramdisk_addr_r", base + SZ_128M);
 	status |= env_set_hex("loadaddr", base + SZ_2G);
+	status |= env_set_hex("kernel_comp_addr_r", base + SZ_2G - SZ_128M);
+	status |= env_set_hex("kernel_comp_size", base + SZ_128M);
 
 	if (status)
 		log_warning("late_init: Failed to set run time variables\n");
